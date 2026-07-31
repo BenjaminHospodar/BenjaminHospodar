@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import logging
 import os
+import random
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -14,10 +15,10 @@ from skyfield.data import hipparcos
 
 DEFAULT_WIDTH = 120
 DEFAULT_HEIGHT = 15
-STAR_MAGNITUDE_CUTOFF = 6.5
+STAR_MAGNITUDE_CUTOFF = 5.0
 HORIZON_CUTOFF_DEGREES = 0.5
 BRIGHT_STAR_HALO_RADIUS = 1
-FAINT_STAR_DENSITY_CUTOFF = 2.7
+FAINT_STAR_DENSITY_CUTOFF = 3.5
 SPARSE_CELL_WIDTH = 12
 SPARSE_CELL_HEIGHT = 3
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -84,9 +85,9 @@ def iter_visible_star_points(
 
 
 def star_char(magnitude: float) -> str:
-    if magnitude <= 1.4:
+    if magnitude <= 2.5:
         return "*"
-    if magnitude <= 2.8:
+    if magnitude <= 4.0:
         return "+"
     return "."
 
@@ -144,15 +145,13 @@ def generate_sky_lines(
             put(x, y, incoming)
 
     def place_faint_dots(x: int, y: int, magnitude: float) -> None:
-        if not 2.2 < magnitude <= 4.5:
+        if magnitude <= 4.0:
             return
 
         put_clamped(x, y, ".", overwrite_dot=False)
-        if magnitude <= 3.6:
-            put_clamped(x + 1, y, ".", overwrite_dot=False)
 
     def place_halo(x: int, y: int, magnitude: float) -> None:
-        if magnitude > 1.4:
+        if magnitude > 2.5:
             return
 
         for dy in range(-BRIGHT_STAR_HALO_RADIUS, BRIGHT_STAR_HALO_RADIUS + 1):
@@ -178,7 +177,7 @@ def generate_sky_lines(
             seed = star_seed(azimuth_deg, altitude_deg, magnitude)
             cell_seed = (cell_x * 92821) ^ (cell_y * 68917)
             sparse_gate = (seed ^ cell_seed) % 100
-            skip_threshold = 62 + int((magnitude - FAINT_STAR_DENSITY_CUTOFF) * 10)
+            skip_threshold = 75 + int((magnitude - FAINT_STAR_DENSITY_CUTOFF) * 10)
             if sparse_gate < skip_threshold:
                 continue
 
@@ -196,9 +195,12 @@ def build_block(lines: list[str]) -> str:
     elif len(normalized_lines) < DEFAULT_HEIGHT:
         normalized_lines.extend([""] * (DEFAULT_HEIGHT - len(normalized_lines)))
 
-    while normalized_lines and not normalized_lines[0]:
+    def _trivial(line: str) -> bool:
+        return not any(ch in line for ch in ('+', '*'))
+
+    while normalized_lines and _trivial(normalized_lines[0]):
         normalized_lines.pop(0)
-    while normalized_lines and not normalized_lines[-1]:
+    while normalized_lines and _trivial(normalized_lines[-1]):
         normalized_lines.pop()
 
     code = "\n".join(normalized_lines)
@@ -252,8 +254,12 @@ def main() -> int:
     now_utc = dt.datetime.now(dt.timezone.utc)
     _log.info("Generating sky at %s UTC", now_utc.strftime("%Y-%m-%d %H:%M"))
 
+    _lat = lat + random.uniform(-0.35, 0.35)
+    _lon = lon + random.uniform(-0.35, 0.35)
+    _now_utc = now_utc + dt.timedelta(seconds=random.uniform(-540, 540))
+
     try:
-        lines = generate_sky_lines(now_utc, lat, lon)
+        lines = generate_sky_lines(_now_utc, _lat, _lon)
     except Exception as exc:
         _log.error("Failed to generate sky lines: %s", exc)
         return 1
