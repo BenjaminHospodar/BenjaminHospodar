@@ -22,16 +22,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Cache Skyfield data
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .skyfield-cache
           key: skyfield-${{ runner.os }}-v1
