@@ -1,0 +1,58 @@
+name: Update Night Sky
+
+on:
+  workflow_dispatch:
+    inputs:
+      lat:
+        description: "Observer latitude (decimal degrees)"
+        required: true
+      lon:
+        description: "Observer longitude (decimal degrees)"
+        required: true
+
+concurrency:
+  group: night-sky
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Cache Skyfield data
+        uses: actions/cache@v4
+        with:
+          path: .skyfield-cache
+          key: skyfield-${{ runner.os }}-v1
+          restore-keys: |
+            skyfield-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate night sky
+        run: python scripts/update_night_sky.py --lat "${{ inputs.lat }}" --lon "${{ inputs.lon }}"
+
+      - name: Commit and push README if changed
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "No README changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: update night sky [skip ci]"
+          git push
