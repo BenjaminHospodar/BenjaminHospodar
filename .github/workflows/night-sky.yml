@@ -42,12 +42,18 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Mask coordinates
+        env:
+          LAT: ${{ inputs.lat }}
+          LON: ${{ inputs.lon }}
         run: |
-          echo "::add-mask::${{ inputs.lat }}"
-          echo "::add-mask::${{ inputs.lon }}"
+          echo "::add-mask::$LAT"
+          echo "::add-mask::$LON"
 
       - name: Generate night sky
-        run: python scripts/update_night_sky.py --lat "${{ inputs.lat }}" --lon "${{ inputs.lon }}"
+        env:
+          LAT: ${{ inputs.lat }}
+          LON: ${{ inputs.lon }}
+        run: python scripts/update_night_sky.py --lat "$LAT" --lon "$LON"
 
       - name: Commit and push README if changed
         run: |
