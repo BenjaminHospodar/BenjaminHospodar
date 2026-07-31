@@ -42,12 +42,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Mask coordinates
-        env:
-          LAT: ${{ inputs.lat }}
-          LON: ${{ inputs.lon }}
         run: |
-          echo "::add-mask::$LAT"
-          echo "::add-mask::$LON"
+          echo "::add-mask::${{ inputs.lat }}"
+          echo "::add-mask::${{ inputs.lon }}"
 
       - name: Generate night sky
         env:
